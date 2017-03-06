@@ -23,7 +23,7 @@ hog.setSVMDetector(cv2.HOGDescriptor_getDefaultPeopleDetector())
 count_up = 0
 count_down = 0
 
-centroid_init = centroid_current = []
+centroid_init, centroid_current = [], []
 init = 0
 
 while True:
@@ -43,6 +43,8 @@ while True:
 	rects = np.array([[x,y,x+w,y+h] for (x,y,w,h) in rects])
 	pick = non_max_suppression(rects, probs=None, overlapThresh=0.65)
 
+	centroid_current[:] = []
+	
 	for (xA, yA, xB, yB) in pick:
 		cv2.rectangle(frame, (xA,yA), (xB,yB), (0,255,0), 2)
 		if init != 0:
@@ -50,17 +52,17 @@ while True:
 		else:
 			centroid_init.append(((xA + xB) * 0.5, (yA + yB) * 0.5))
 
-	if len(pick) > 0:
-		init += 1
+	if init == 0:
+		init = 1
 
 	#print(centroid_init)
 
 	xy1 = np.asarray(centroid_init)
 	xy2 = np.asarray(centroid_current)
 
-	if centroid_current != centroid_init:
-		print(0)
-
+	if xy1.all() != xy2.all():
+		print('0')
+	print(xy1, xy2)
 	#print(xy1, xy2)
 
 	if len(xy2) > 0 and len(xy1) > 0:
@@ -68,10 +70,10 @@ while True:
 			dists = np.sqrt((xy1[:, 0, np.newaxis] - xy2[:, 0])**2 + (xy1[:, 1, np.newaxis] - xy2[:, 1])**2)
 			mindist = np.min(dists, axis=1)
 			minid = np.argmin(dists, axis=1)
-			displacement = xy2 - xy1[minid]
+			displacement = xy2[minid] - xy1
 			displacement = displacement[:, 0]
 		elif len(xy2) == 1 and len(xy1) > 1:
-			dists = np.sqrt((xy1[0, np.newaxis] - xy2[0])**2 + (xy1[1, np.newaxis] - xy2[1])**2)
+			dists = np.sqrt((xy1[0, np.newaxis] - xy2[:, 0])**2 + (xy1[1, np.newaxis] - xy2[:, 1])**2)
 			mindist = np.min(dists, axis=1)
 			minid = np.argmin(dists, axis=1)
 			displacement = xy2 - xy1[minid]
@@ -92,8 +94,8 @@ while True:
 		pass
 
 	#print(displacement)
-	#if displacement.any != 0:
-     	#	print (1)
+	
+    
 
 	#cv2.imshow("Before NMS", orig)
 	cv2.putText(frame, "Count_up: {}".format(count_up), (10, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
@@ -101,9 +103,9 @@ while True:
 	cv2.imshow("After NMS", frame)
 
 	#if init % 3 == 0:
-	centroid_init[:] = []
-	centroid_init = centroid_current
-	centroid_current[:] = []
+	#centroid_init[:] = []
+	centroid_init = centroid_current.copy()
+	
 
 	if cv2.waitKey(1) & 0xFF == ord("q"):
 		break
